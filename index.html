@@ -116,6 +116,13 @@
     box-shadow: 0 0 20px var(--primary), inset 0 0 20px var(--primary-bg);
   }
 
+  #loading-status {
+    color: var(--primary-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    display: none;
+  }
+
   #controls {
     position: fixed;
     bottom: 20px;
@@ -162,11 +169,6 @@
     text-shadow: 0 0 5px var(--primary);
     opacity: 0.6;
     text-align: right;
-  }
-
-  #status-bar .person-count {
-    color: #00ffff;
-    text-shadow: 0 0 8px #00ffff;
   }
 
   #rec-indicator {
@@ -225,8 +227,9 @@
 
 <div id="start-screen">
   <h1>// ASCII MATRIX CAM //</h1>
-  <p>Live camera feed rendered as ASCII art<br>with Matrix digital rain aesthetic<br><br>Detects and highlights people</p>
+  <p>Live camera feed rendered as ASCII art<br>with Matrix digital rain aesthetic<br><br>AI-powered body segmentation</p>
   <button id="start-btn">[ ENTER THE MATRIX ]</button>
+  <div id="loading-status">Loading AI model...</div>
 </div>
 
 <div id="rec-indicator"><span class="rec-dot"></span> REC</div>
@@ -241,7 +244,7 @@
   <button class="ctrl-btn" id="btn-res">RES+</button>
   <button class="ctrl-btn active" id="btn-color">COLOR</button>
   <button class="ctrl-btn" id="btn-invert">INVERT</button>
-  <button class="ctrl-btn active" id="btn-detect">DETECT</button>
+  <button class="ctrl-btn active" id="btn-detect">SEGMENT</button>
   <button class="ctrl-btn" id="btn-hybrid">ISOLATE</button>
   <button class="ctrl-btn" id="btn-record" style="display:none;">REC</button>
   <button class="ctrl-btn" id="btn-snap">SNAP</button>
@@ -250,10 +253,12 @@
 <canvas id="bg-canvas"></canvas>
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
-<canvas id="detect-canvas"></canvas>
+<canvas id="seg-canvas"></canvas>
 <canvas id="record-canvas"></canvas>
 
-<script>
+<script type="module">
+import { ImageSegmenter, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/+esm';
+
 // ── Character Sets ──────────────────────────────────────────────
 const ASCII_CHARS = ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
 const MATRIX_CHARS = 'ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ012345789Z:・."=*+-<>¦╌ç';
@@ -267,13 +272,10 @@ const THEMES = {
     glow: '0 0 5px #00ff41, 0 0 10px #003b00',
     scanlineColor: 'rgba(0, 0, 0, 0.15)',
     charColor(t) {
-      const g = 80 + t * 175 | 0;
-      const r = t * t * 80 | 0;
-      const b = t * t * 40 | 0;
-      return `rgb(${r},${g},${b})`;
+      return `rgb(${t*t*80|0},${80+t*175|0},${t*t*40|0})`;
     },
     highlightColor(t) {
-      return `rgb(${30 + t * 200 | 0},${200 + t * 55 | 0},${200 + t * 55 | 0})`;
+      return `rgb(${30+t*200|0},${200+t*55|0},${200+t*55|0})`;
     },
     highlightGlow: '0 0 6px #00ffff,0 0 12px #005577',
     highlightDimColor: '#001a1a',
@@ -287,13 +289,10 @@ const THEMES = {
     glow: '0 0 5px #ffb000, 0 0 10px #3b2200',
     scanlineColor: 'rgba(10, 5, 0, 0.15)',
     charColor(t) {
-      const r = 100 + t * 155 | 0;
-      const g = 50 + t * 126 | 0;
-      const b = t * t * 30 | 0;
-      return `rgb(${r},${g},${b})`;
+      return `rgb(${100+t*155|0},${50+t*126|0},${t*t*30|0})`;
     },
     highlightColor(t) {
-      return `rgb(${200 + t * 55 | 0},${190 + t * 65 | 0},${80 + t * 150 | 0})`;
+      return `rgb(${200+t*55|0},${190+t*65|0},${80+t*150|0})`;
     },
     highlightGlow: '0 0 6px #ffe0a0,0 0 12px #775500',
     highlightDimColor: '#1a1000',
@@ -307,13 +306,10 @@ const THEMES = {
     glow: '0 0 5px #ff00ff, 0 0 10px #3b003b',
     scanlineColor: 'rgba(5, 0, 10, 0.15)',
     charColor(t) {
-      const r = 80 + t * 175 | 0;
-      const g = t * t * 60 | 0;
-      const b = 100 + t * 155 | 0;
-      return `rgb(${r},${g},${b})`;
+      return `rgb(${80+t*175|0},${t*t*60|0},${100+t*155|0})`;
     },
     highlightColor(t) {
-      return `rgb(${50 + t * 200 | 0},${200 + t * 55 | 0},${220 + t * 35 | 0})`;
+      return `rgb(${50+t*200|0},${200+t*55|0},${220+t*35|0})`;
     },
     highlightGlow: '0 0 6px #00ffff,0 0 12px #ff00ff',
     highlightDimColor: '#0a0a1a',
@@ -327,13 +323,10 @@ const THEMES = {
     glow: '0 0 5px #4da6ff, 0 0 10px #0a2a4a',
     scanlineColor: 'rgba(0, 2, 10, 0.15)',
     charColor(t) {
-      const r = 40 + t * 80 | 0;
-      const g = 80 + t * 120 | 0;
-      const b = 140 + t * 115 | 0;
-      return `rgb(${r},${g},${b})`;
+      return `rgb(${40+t*80|0},${80+t*120|0},${140+t*115|0})`;
     },
     highlightColor(t) {
-      return `rgb(${180 + t * 75 | 0},${200 + t * 55 | 0},${220 + t * 35 | 0})`;
+      return `rgb(${180+t*75|0},${200+t*55|0},${220+t*35|0})`;
     },
     highlightGlow: '0 0 6px #ffffff,0 0 12px #4da6ff',
     highlightDimColor: '#000a15',
@@ -347,13 +340,10 @@ const THEMES = {
     glow: '0 0 5px #ff2222, 0 0 10px #3b0000',
     scanlineColor: 'rgba(10, 0, 0, 0.15)',
     charColor(t) {
-      const r = 100 + t * 155 | 0;
-      const g = t * t * 40 | 0;
-      const b = t * t * 20 | 0;
-      return `rgb(${r},${g},${b})`;
+      return `rgb(${100+t*155|0},${t*t*40|0},${t*t*20|0})`;
     },
     highlightColor(t) {
-      return `rgb(${200 + t * 55 | 0},${100 + t * 155 | 0},${50 + t * 100 | 0})`;
+      return `rgb(${200+t*55|0},${100+t*155|0},${50+t*100|0})`;
     },
     highlightGlow: '0 0 6px #ffaa44,0 0 12px #ff2222',
     highlightDimColor: '#1a0500',
@@ -381,6 +371,8 @@ function applyTheme(key) {
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const segCanvas = document.getElementById('seg-canvas');
+const segCtx = segCanvas.getContext('2d', { willReadFrequently: true });
 const output = document.getElementById('ascii-output');
 const statusBar = document.getElementById('status-bar');
 const recordCanvas = document.getElementById('record-canvas');
@@ -390,6 +382,7 @@ const bgCtx = bgCanvas.getContext('2d');
 const recIndicator = document.getElementById('rec-indicator');
 const btnRecord = document.getElementById('btn-record');
 const btnSnap = document.getElementById('btn-snap');
+const loadingStatus = document.getElementById('loading-status');
 
 // ── State ───────────────────────────────────────────────────────
 let resLevel = 0;
@@ -407,27 +400,87 @@ let facingMode = 'user';
 let stream = null;
 let running = false;
 
-// Current frame dimensions (used by screenshot/record outside render loop)
 let curCols = 0, curRows = 0, curCharW = 6, curCharH = 12;
-let curCells = null; // intermediate cell data from last frame
+let curCells = null;
 
-// ── Face Detection ──────────────────────────────────────────────
-let faceDetector = null;
-let hasFaceAPI = false;
-let detectedFaces = [];
-let faceRects = [];
-let lastDetectTime = 0;
-const DETECT_INTERVAL = 300;
+// ── MediaPipe Segmentation ──────────────────────────────────────
+let segmenter = null;
+let segMask = null;         // Float32Array of confidence values (0.0-1.0) at segmenter resolution
+let segMaskW = 0, segMaskH = 0;
+let segReady = false;
+let lastSegTime = 0;
+const SEG_INTERVAL = 50;    // Run segmentation every 50ms (~20fps) for smooth tracking
+const SEG_THRESHOLD = 0.5;  // Confidence threshold: pixel is "person" if >= this value
 
-async function initFaceDetector() {
-  if (typeof FaceDetector !== 'undefined') {
-    try {
-      faceDetector = new FaceDetector({ fastMode: true, maxDetectedFaces: 10 });
-      hasFaceAPI = true;
-    } catch (e) { /* fallback to skin detection */ }
+async function initSegmenter() {
+  loadingStatus.style.display = 'block';
+  loadingStatus.textContent = 'Loading AI segmentation model...';
+  try {
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
+    );
+    segmenter = await ImageSegmenter.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
+        delegate: 'GPU',
+      },
+      runningMode: 'VIDEO',
+      outputCategoryMask: false,
+      outputConfidenceMasks: true,
+    });
+    segReady = true;
+    loadingStatus.textContent = 'AI model loaded. Ready.';
+    setTimeout(() => { loadingStatus.style.display = 'none'; }, 1000);
+  } catch (e) {
+    console.error('Segmenter init failed:', e);
+    loadingStatus.textContent = 'AI model failed to load. Using basic detection.';
+    setTimeout(() => { loadingStatus.style.display = 'none'; }, 3000);
   }
 }
-initFaceDetector();
+
+function runSegmentation() {
+  if (!segmenter || !video.videoWidth) return;
+  try {
+    const result = segmenter.segmentForVideo(video, performance.now());
+    if (result.confidenceMasks && result.confidenceMasks.length > 0) {
+      const mask = result.confidenceMasks[0];
+      // Get the raw float data - this is the person confidence per pixel
+      segMask = mask.getAsFloat32Array();
+      segMaskW = mask.width;
+      segMaskH = mask.height;
+      mask.close();
+    }
+    if (result.categoryMask) result.categoryMask.close();
+  } catch (e) {
+    // Can fail intermittently, that's fine
+  }
+}
+
+// Sample the segmentation mask at ASCII grid coordinates
+// The mask is at video resolution, we need to map to our cols x rows grid
+function getSegMaskForGrid(cols, rows) {
+  const highlighted = new Uint8Array(cols * rows);
+  if (!segMask || !segMaskW || !segMaskH) return highlighted;
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      // Map grid position to mask position
+      // Account for mirror flip on front camera
+      let mx;
+      if (facingMode === 'user') {
+        mx = ((cols - 1 - x) / cols * segMaskW) | 0;
+      } else {
+        mx = (x / cols * segMaskW) | 0;
+      }
+      const my = (y / rows * segMaskH) | 0;
+      const mi = my * segMaskW + mx;
+      if (mi < segMask.length && segMask[mi] >= SEG_THRESHOLD) {
+        highlighted[y * cols + x] = 1;
+      }
+    }
+  }
+  return highlighted;
+}
 
 // ── Recording ───────────────────────────────────────────────────
 let isRecording = false;
@@ -437,9 +490,9 @@ let canUseMediaRecorder = false;
 
 function checkMediaRecorderSupport() {
   try {
-    const testCanvas = document.createElement('canvas');
-    testCanvas.width = testCanvas.height = 2;
-    const testStream = testCanvas.captureStream(0);
+    const tc = document.createElement('canvas');
+    tc.width = tc.height = 2;
+    const ts = tc.captureStream(0);
     const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
     for (const mime of mimeTypes) {
       if (MediaRecorder.isTypeSupported(mime)) {
@@ -462,7 +515,6 @@ function renderToCanvas() {
   recordCanvas.height = h;
 
   if (hybridMode) {
-    // Draw video background
     if (facingMode === 'user') { recordCtx.translate(w, 0); recordCtx.scale(-1, 1); }
     recordCtx.drawImage(video, 0, 0, w, h);
     if (facingMode === 'user') recordCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -479,8 +531,7 @@ function renderToCanvas() {
       const cell = curCells[y * curCols + x];
       if (cell.ch === ' ' || cell.color === 'transparent') continue;
       if (hybridMode) {
-        // Dark backing behind ASCII chars for readability
-        recordCtx.fillStyle = 'rgba(0,0,0,0.6)';
+        recordCtx.fillStyle = 'rgba(0,0,0,0.55)';
         recordCtx.fillRect(x * curCharW, y * curCharH, curCharW, curCharH);
       }
       recordCtx.fillStyle = cell.color;
@@ -491,13 +542,12 @@ function renderToCanvas() {
 
 function startRecording() {
   recordedChunks = [];
-  // Ensure canvas has a valid size before capturing
   renderToCanvas();
-  const stream = recordCanvas.captureStream(30);
+  const capturedStream = recordCanvas.captureStream(30);
   const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   const mimeType = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
 
-  mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+  mediaRecorder = new MediaRecorder(capturedStream, { mimeType, videoBitsPerSecond: 2500000 });
   mediaRecorder.ondataavailable = (e) => {
     if (e.data.size > 0) recordedChunks.push(e.data);
   };
@@ -513,9 +563,7 @@ function startRecording() {
 }
 
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
-  }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   isRecording = false;
   btnRecord.textContent = 'REC';
   btnRecord.classList.remove('recording');
@@ -535,7 +583,7 @@ async function shareOrDownload(blob, fileName) {
     try {
       await navigator.share({ files: [file], title: 'ASCII Matrix Cam' });
       return;
-    } catch (e) { /* user cancelled or failed, fall through */ }
+    } catch (e) { /* fall through */ }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -570,112 +618,7 @@ async function startCamera() {
   }
 }
 
-// ── Face Detection Helpers ──────────────────────────────────────
-async function detectFacesNative() {
-  if (!faceDetector || !video.videoWidth) return;
-  try {
-    const faces = await faceDetector.detect(video);
-    detectedFaces = faces.map(f => f.boundingBox);
-  } catch (e) { /* */ }
-}
-
-function isSkinTone(r, g, b) {
-  if (r > 80 && g > 40 && b > 20 && r > g && r > b && (r - g) > 10 && Math.abs(r - g) < 130 && r - b > 15) return true;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), diff = max - min;
-  if (diff > 0) {
-    let h = 0;
-    if (max === r) h = 60 * ((g - b) / diff);
-    else if (max === g) h = 60 * (2 + (b - r) / diff);
-    else h = 60 * (4 + (r - g) / diff);
-    if (h < 0) h += 360;
-    const s = diff / max, v = max / 255;
-    if (h >= 0 && h <= 50 && s >= 0.1 && s <= 0.7 && v >= 0.2) return true;
-  }
-  return false;
-}
-
-function detectSkinTones(pixels, cols, rows) {
-  const mask = new Uint8Array(cols * rows);
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const i = (y * cols + x) * 4;
-      if (isSkinTone(pixels[i], pixels[i + 1], pixels[i + 2])) mask[y * cols + x] = 1;
-    }
-  }
-  // Dilate
-  const dilated = new Uint8Array(cols * rows);
-  const radius = 3;
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      if (mask[y * cols + x]) {
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const ny = y + dy, nx = x + dx;
-            if (ny >= 0 && ny < rows && nx >= 0 && nx < cols) dilated[ny * cols + nx] = 1;
-          }
-        }
-      }
-    }
-  }
-  return findPersonRegions(dilated, cols, rows);
-}
-
-function findPersonRegions(mask, cols, rows) {
-  const visited = new Uint8Array(cols * rows);
-  const result = new Uint8Array(cols * rows);
-  const minSize = Math.floor(cols * rows * 0.005);
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const idx = y * cols + x;
-      if (mask[idx] && !visited[idx]) {
-        const region = [];
-        const queue = [idx];
-        visited[idx] = 1;
-        while (queue.length > 0) {
-          const curr = queue.shift();
-          region.push(curr);
-          const cx = curr % cols, cy = curr / cols | 0;
-          for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-            const nx = cx + dx, ny = cy + dy, ni = ny * cols + nx;
-            if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && mask[ni] && !visited[ni]) {
-              visited[ni] = 1;
-              queue.push(ni);
-            }
-          }
-        }
-        if (region.length >= minSize) {
-          for (const i of region) result[i] = 1;
-        }
-      }
-    }
-  }
-  return result;
-}
-
-function mapFacesToGrid(cols, rows, vw, vh) {
-  faceRects = [];
-  for (const face of detectedFaces) {
-    const fx = face.x / vw, fy = face.y / vh, fw = face.width / vw, fh = face.height / vh;
-    const bodyH = fh * 4, bodyW = fw * 2.5, cx = fx + fw / 2, bodyX = cx - bodyW / 2;
-    const pad = fw * 0.6;
-    let x1 = Math.max(0, (bodyX - pad) * cols | 0);
-    let y1 = Math.max(0, (fy - fh * 0.6) * rows | 0);
-    let x2 = Math.min(cols - 1, Math.ceil((bodyX + bodyW + pad) * cols));
-    let y2 = Math.min(rows - 1, Math.ceil((fy + bodyH + fh * 0.6) * rows));
-    faceRects.push({ x1, y1, x2, y2 });
-  }
-}
-
-function isInFaceRect(x, y) {
-  for (const r of faceRects) {
-    if (x >= r.x1 && x <= r.x2 && y >= r.y1 && y <= r.y2) return true;
-  }
-  return false;
-}
-
 // ── Render Loop ─────────────────────────────────────────────────
-let skinMask = null;
-
 async function render() {
   if (!running) return;
 
@@ -694,7 +637,7 @@ async function render() {
   ctx.drawImage(video, 0, 0, cols, rows);
   if (facingMode === 'user') ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // Draw background video for hybrid mode
+  // Draw background video for hybrid/isolate mode
   if (hybridMode) {
     bgCanvas.width = screenW;
     bgCanvas.height = screenH;
@@ -706,38 +649,25 @@ async function render() {
   const imageData = ctx.getImageData(0, 0, cols, rows);
   const pixels = imageData.data;
 
-  // Detection
+  // Run segmentation
   const now = performance.now();
-  if (detectPeople && now - lastDetectTime > DETECT_INTERVAL) {
-    lastDetectTime = now;
-    if (hasFaceAPI) {
-      await detectFacesNative();
-      mapFacesToGrid(cols, rows, vw, vh);
-    } else {
-      skinMask = detectSkinTones(pixels, cols, rows);
-    }
+  if (detectPeople && segReady && now - lastSegTime > SEG_INTERVAL) {
+    lastSegTime = now;
+    runSegmentation();
   }
 
-  // Build highlight map
-  const isHighlighted = new Uint8Array(cols * rows);
-  if (detectPeople) {
-    if (hasFaceAPI && faceRects.length > 0) {
-      for (let y = 0; y < rows; y++)
-        for (let x = 0; x < cols; x++)
-          if (isInFaceRect(x, y)) isHighlighted[y * cols + x] = 1;
-    } else if (!hasFaceAPI && skinMask) {
-      for (let i = 0; i < cols * rows; i++) isHighlighted[i] = skinMask[i];
-    }
+  // Build highlight map from segmentation mask
+  let isHighlighted;
+  if (detectPeople && segReady && segMask) {
+    isHighlighted = getSegMaskForGrid(cols, rows);
+  } else {
+    isHighlighted = new Uint8Array(cols * rows);
   }
 
-  // Status
+  // Status bar
   if (detectPeople) {
-    const method = hasFaceAPI ? 'FACE_API' : 'SKIN_DETECT';
-    let count = hasFaceAPI ? detectedFaces.length : 0;
-    if (!hasFaceAPI && skinMask) {
-      for (let i = 0; i < isHighlighted.length; i++) { if (isHighlighted[i]) { count = '?'; break; } }
-    }
-    statusBar.innerHTML = `[${method}] <span class="person-count">TARGETS: ${count}</span>`;
+    const mode = segReady ? 'AI_SEGMENT' : 'LOADING...';
+    statusBar.innerHTML = `[${mode}]`;
   } else {
     statusBar.innerHTML = '';
   }
@@ -760,19 +690,19 @@ async function render() {
       const t = charIndex / (charLen - 1);
       const hl = isHighlighted[y * cols + x];
 
-      // Hybrid mode: only render ASCII for detected subjects, background is transparent
       if (hybridMode) {
+        // ISOLATE: ASCII on person, raw camera behind
         if (hl) {
           const color = ch === ' ' ? theme.highlightDimColor : theme.highlightColor(t);
           const displayCh = ch === ' ' ? '.' : ch;
           cells[y * cols + x] = { ch: displayCh, color };
-          html += `<span style="color:${color};text-shadow:${theme.highlightGlow};background:rgba(0,0,0,0.6)">${displayCh}</span>`;
+          html += `<span style="color:${color};text-shadow:${theme.highlightGlow};background:rgba(0,0,0,0.55)">${displayCh}</span>`;
         } else {
           cells[y * cols + x] = { ch: ' ', color: 'transparent' };
           html += ' ';
         }
       } else {
-        // Normal full-ASCII mode
+        // NORMAL: full ASCII everywhere
         let color;
         if (ch === ' ') {
           color = hl ? theme.highlightDimColor : theme.background;
@@ -797,7 +727,6 @@ async function render() {
     if (y < rows - 1) html += '\n';
   }
 
-  // Store for recording/screenshot
   curCols = cols; curRows = rows; curCharW = charW; curCharH = charH; curCells = cells;
 
   if (useColor || detectPeople || hybridMode) {
@@ -805,17 +734,13 @@ async function render() {
   } else {
     let text = '';
     for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        text += cells[y * cols + x].ch;
-      }
+      for (let x = 0; x < cols; x++) text += cells[y * cols + x].ch;
       if (y < rows - 1) text += '\n';
     }
     output.textContent = text;
   }
 
-  // Draw to record canvas if recording
   if (isRecording) renderToCanvas();
-
   requestAnimationFrame(render);
 }
 
@@ -875,14 +800,13 @@ document.getElementById('btn-invert').addEventListener('click', (e) => {
 document.getElementById('btn-detect').addEventListener('click', (e) => {
   detectPeople = !detectPeople;
   e.target.classList.toggle('active', detectPeople);
-  if (!detectPeople) { detectedFaces = []; faceRects = []; skinMask = null; statusBar.innerHTML = ''; }
+  if (!detectPeople) { segMask = null; statusBar.innerHTML = ''; }
 });
 
 document.getElementById('btn-hybrid').addEventListener('click', (e) => {
   hybridMode = !hybridMode;
   e.target.classList.toggle('active', hybridMode);
   document.body.classList.toggle('hybrid-mode', hybridMode);
-  // Auto-enable detection when entering hybrid mode
   if (hybridMode && !detectPeople) {
     detectPeople = true;
     document.getElementById('btn-detect').classList.add('active');
@@ -895,6 +819,9 @@ btnRecord.addEventListener('click', () => {
 });
 
 btnSnap.addEventListener('click', takeScreenshot);
+
+// ── Init ────────────────────────────────────────────────────────
+initSegmenter();
 </script>
 </body>
 </html>
