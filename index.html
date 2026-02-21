@@ -5,10 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ASCII Matrix Cam</title>
 <style>
+  :root {
+    --primary: #00ff41;
+    --primary-dim: #00aa30;
+    --primary-bg: #003b00;
+    --background: #000a00;
+    --glow: 0 0 5px #00ff41, 0 0 10px #003b00;
+    --scanline-color: rgba(0, 0, 0, 0.15);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    background: #000;
+    background: var(--background);
     overflow: hidden;
     font-family: 'Courier New', monospace;
     height: 100vh;
@@ -19,15 +28,16 @@
     justify-content: center;
     -webkit-user-select: none;
     user-select: none;
+    transition: background 0.4s;
   }
 
   #ascii-output {
     white-space: pre;
-    color: #00ff41;
+    color: var(--primary);
     font-size: 10px;
     line-height: 1.0;
     letter-spacing: 1px;
-    text-shadow: 0 0 5px #00ff41, 0 0 10px #003b00;
+    text-shadow: var(--glow);
     position: absolute;
     top: 50%;
     left: 50%;
@@ -41,8 +51,8 @@
     pointer-events: none;
     background: repeating-linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0.15) 0px,
-      rgba(0, 0, 0, 0.15) 1px,
+      var(--scanline-color) 0px,
+      var(--scanline-color) 1px,
       transparent 1px,
       transparent 3px
     );
@@ -72,16 +82,16 @@
   }
 
   #start-screen h1 {
-    color: #00ff41;
+    color: var(--primary);
     font-family: 'Courier New', monospace;
     font-size: 24px;
-    text-shadow: 0 0 10px #00ff41, 0 0 20px #003b00;
+    text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary-bg);
     text-align: center;
     padding: 0 20px;
   }
 
   #start-screen p {
-    color: #00aa30;
+    color: var(--primary-dim);
     font-family: 'Courier New', monospace;
     font-size: 14px;
     text-align: center;
@@ -90,20 +100,20 @@
 
   #start-btn {
     background: transparent;
-    color: #00ff41;
-    border: 2px solid #00ff41;
+    color: var(--primary);
+    border: 2px solid var(--primary);
     padding: 15px 40px;
     font-family: 'Courier New', monospace;
     font-size: 18px;
     cursor: pointer;
-    text-shadow: 0 0 5px #00ff41;
-    box-shadow: 0 0 10px #003b00, inset 0 0 10px #003b00;
+    text-shadow: 0 0 5px var(--primary);
+    box-shadow: 0 0 10px var(--primary-bg), inset 0 0 10px var(--primary-bg);
     transition: all 0.3s;
   }
 
   #start-btn:hover, #start-btn:active {
-    background: #00ff4120;
-    box-shadow: 0 0 20px #00ff41, inset 0 0 20px #003b00;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    box-shadow: 0 0 20px var(--primary), inset 0 0 20px var(--primary-bg);
   }
 
   #controls {
@@ -113,7 +123,7 @@
     transform: translateX(-50%);
     z-index: 20;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     opacity: 0.4;
     transition: opacity 0.3s;
     flex-wrap: wrap;
@@ -125,19 +135,20 @@
 
   .ctrl-btn {
     background: transparent;
-    color: #00ff41;
-    border: 1px solid #00ff4180;
+    color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
     padding: 8px 12px;
     font-family: 'Courier New', monospace;
     font-size: 11px;
     cursor: pointer;
     border-radius: 3px;
     white-space: nowrap;
+    transition: color 0.3s, border-color 0.3s;
   }
 
   .ctrl-btn.active {
-    background: #00ff4130;
-    border-color: #00ff41;
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    border-color: var(--primary);
   }
 
   #status-bar {
@@ -145,10 +156,10 @@
     top: 10px;
     right: 10px;
     z-index: 20;
-    color: #00ff41;
+    color: var(--primary);
     font-family: 'Courier New', monospace;
     font-size: 11px;
-    text-shadow: 0 0 5px #00ff41;
+    text-shadow: 0 0 5px var(--primary);
     opacity: 0.6;
     text-align: right;
   }
@@ -158,7 +169,56 @@
     text-shadow: 0 0 8px #00ffff;
   }
 
-  video, canvas { display: none; }
+  #rec-indicator {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 20;
+    color: #ff3333;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    text-shadow: 0 0 8px #ff0000;
+  }
+
+  .rec-dot {
+    width: 10px;
+    height: 10px;
+    background: #ff0000;
+    border-radius: 50%;
+    animation: rec-blink 1s infinite;
+    box-shadow: 0 0 6px #ff0000;
+  }
+
+  @keyframes rec-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .ctrl-btn.recording {
+    color: #ff3333 !important;
+    border-color: #ff3333 !important;
+    background: rgba(255, 0, 0, 0.15) !important;
+    animation: rec-blink 1s infinite;
+  }
+
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    display: none;
+  }
+
+  body.hybrid-mode #bg-canvas { display: block; }
+  body.hybrid-mode #ascii-output { z-index: 2; }
+  body.hybrid-mode { background: #000; }
+
+  video, canvas:not(#bg-canvas) { display: none; }
 </style>
 </head>
 <body>
@@ -169,35 +229,169 @@
   <button id="start-btn">[ ENTER THE MATRIX ]</button>
 </div>
 
+<div id="rec-indicator"><span class="rec-dot"></span> REC</div>
 <div id="status-bar"></div>
 <div id="ascii-output"></div>
 <div id="scanlines"></div>
 <div id="vignette"></div>
 
 <div id="controls" style="display:none;">
+  <button class="ctrl-btn" id="btn-theme">MATRIX</button>
   <button class="ctrl-btn" id="btn-flip">FLIP</button>
   <button class="ctrl-btn" id="btn-res">RES+</button>
   <button class="ctrl-btn active" id="btn-color">COLOR</button>
   <button class="ctrl-btn" id="btn-invert">INVERT</button>
   <button class="ctrl-btn active" id="btn-detect">DETECT</button>
+  <button class="ctrl-btn" id="btn-hybrid">ISOLATE</button>
+  <button class="ctrl-btn" id="btn-record" style="display:none;">REC</button>
+  <button class="ctrl-btn" id="btn-snap">SNAP</button>
 </div>
 
+<canvas id="bg-canvas"></canvas>
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
 <canvas id="detect-canvas"></canvas>
+<canvas id="record-canvas"></canvas>
 
 <script>
+// ── Character Sets ──────────────────────────────────────────────
 const ASCII_CHARS = ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
 const MATRIX_CHARS = 'ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ012345789Z:・."=*+-<>¦╌ç';
 
+// ── Themes ──────────────────────────────────────────────────────
+const THEMES = {
+  matrix: {
+    name: 'MATRIX',
+    primary: '#00ff41', primaryDim: '#00aa30', primaryBg: '#003b00',
+    background: '#000a00',
+    glow: '0 0 5px #00ff41, 0 0 10px #003b00',
+    scanlineColor: 'rgba(0, 0, 0, 0.15)',
+    charColor(t) {
+      const g = 80 + t * 175 | 0;
+      const r = t * t * 80 | 0;
+      const b = t * t * 40 | 0;
+      return `rgb(${r},${g},${b})`;
+    },
+    highlightColor(t) {
+      return `rgb(${30 + t * 200 | 0},${200 + t * 55 | 0},${200 + t * 55 | 0})`;
+    },
+    highlightGlow: '0 0 6px #00ffff,0 0 12px #005577',
+    highlightDimColor: '#001a1a',
+    glitchColor: '#ffffff',
+    glitchGlow: '0 0 10px #00ff41, 0 0 20px #00ffff',
+  },
+  amber: {
+    name: 'AMBER',
+    primary: '#ffb000', primaryDim: '#aa7500', primaryBg: '#3b2200',
+    background: '#0a0500',
+    glow: '0 0 5px #ffb000, 0 0 10px #3b2200',
+    scanlineColor: 'rgba(10, 5, 0, 0.15)',
+    charColor(t) {
+      const r = 100 + t * 155 | 0;
+      const g = 50 + t * 126 | 0;
+      const b = t * t * 30 | 0;
+      return `rgb(${r},${g},${b})`;
+    },
+    highlightColor(t) {
+      return `rgb(${200 + t * 55 | 0},${190 + t * 65 | 0},${80 + t * 150 | 0})`;
+    },
+    highlightGlow: '0 0 6px #ffe0a0,0 0 12px #775500',
+    highlightDimColor: '#1a1000',
+    glitchColor: '#ffffff',
+    glitchGlow: '0 0 10px #ffb000, 0 0 20px #ffe0a0',
+  },
+  synthwave: {
+    name: 'SYNTH',
+    primary: '#ff00ff', primaryDim: '#aa00aa', primaryBg: '#3b003b',
+    background: '#0a000e',
+    glow: '0 0 5px #ff00ff, 0 0 10px #3b003b',
+    scanlineColor: 'rgba(5, 0, 10, 0.15)',
+    charColor(t) {
+      const r = 80 + t * 175 | 0;
+      const g = t * t * 60 | 0;
+      const b = 100 + t * 155 | 0;
+      return `rgb(${r},${g},${b})`;
+    },
+    highlightColor(t) {
+      return `rgb(${50 + t * 200 | 0},${200 + t * 55 | 0},${220 + t * 35 | 0})`;
+    },
+    highlightGlow: '0 0 6px #00ffff,0 0 12px #ff00ff',
+    highlightDimColor: '#0a0a1a',
+    glitchColor: '#00ffff',
+    glitchGlow: '0 0 10px #ff00ff, 0 0 20px #00ffff',
+  },
+  blueprint: {
+    name: 'BLUE',
+    primary: '#4da6ff', primaryDim: '#2a7acc', primaryBg: '#0a2a4a',
+    background: '#000a1a',
+    glow: '0 0 5px #4da6ff, 0 0 10px #0a2a4a',
+    scanlineColor: 'rgba(0, 2, 10, 0.15)',
+    charColor(t) {
+      const r = 40 + t * 80 | 0;
+      const g = 80 + t * 120 | 0;
+      const b = 140 + t * 115 | 0;
+      return `rgb(${r},${g},${b})`;
+    },
+    highlightColor(t) {
+      return `rgb(${180 + t * 75 | 0},${200 + t * 55 | 0},${220 + t * 35 | 0})`;
+    },
+    highlightGlow: '0 0 6px #ffffff,0 0 12px #4da6ff',
+    highlightDimColor: '#000a15',
+    glitchColor: '#ffffff',
+    glitchGlow: '0 0 10px #4da6ff, 0 0 20px #ffffff',
+  },
+  red: {
+    name: 'RED',
+    primary: '#ff2222', primaryDim: '#aa1111', primaryBg: '#3b0000',
+    background: '#0a0000',
+    glow: '0 0 5px #ff2222, 0 0 10px #3b0000',
+    scanlineColor: 'rgba(10, 0, 0, 0.15)',
+    charColor(t) {
+      const r = 100 + t * 155 | 0;
+      const g = t * t * 40 | 0;
+      const b = t * t * 20 | 0;
+      return `rgb(${r},${g},${b})`;
+    },
+    highlightColor(t) {
+      return `rgb(${200 + t * 55 | 0},${100 + t * 155 | 0},${50 + t * 100 | 0})`;
+    },
+    highlightGlow: '0 0 6px #ffaa44,0 0 12px #ff2222',
+    highlightDimColor: '#1a0500',
+    glitchColor: '#ffff00',
+    glitchGlow: '0 0 10px #ff2222, 0 0 20px #ffaa44',
+  },
+};
+
+const themeKeys = Object.keys(THEMES);
+let currentThemeIndex = 0;
+let theme = THEMES.matrix;
+
+function applyTheme(key) {
+  theme = THEMES[key];
+  const s = document.documentElement.style;
+  s.setProperty('--primary', theme.primary);
+  s.setProperty('--primary-dim', theme.primaryDim);
+  s.setProperty('--primary-bg', theme.primaryBg);
+  s.setProperty('--background', theme.background);
+  s.setProperty('--glow', theme.glow);
+  s.setProperty('--scanline-color', theme.scanlineColor);
+}
+
+// ── DOM Elements ────────────────────────────────────────────────
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-const detectCanvas = document.getElementById('detect-canvas');
-const detectCtx = detectCanvas.getContext('2d', { willReadFrequently: true });
 const output = document.getElementById('ascii-output');
 const statusBar = document.getElementById('status-bar');
+const recordCanvas = document.getElementById('record-canvas');
+const recordCtx = recordCanvas.getContext('2d');
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+const recIndicator = document.getElementById('rec-indicator');
+const btnRecord = document.getElementById('btn-record');
+const btnSnap = document.getElementById('btn-snap');
 
+// ── State ───────────────────────────────────────────────────────
 let resLevel = 0;
 const resOptions = [
   { charW: 6, charH: 12, label: 'RES+' },
@@ -208,33 +402,152 @@ const resOptions = [
 let useColor = true;
 let invert = false;
 let detectPeople = true;
+let hybridMode = false;
 let facingMode = 'user';
 let stream = null;
 let running = false;
 
-// Face detection
+// Current frame dimensions (used by screenshot/record outside render loop)
+let curCols = 0, curRows = 0, curCharW = 6, curCharH = 12;
+let curCells = null; // intermediate cell data from last frame
+
+// ── Face Detection ──────────────────────────────────────────────
 let faceDetector = null;
 let hasFaceAPI = false;
-let detectedFaces = []; // [{x, y, width, height} in video coordinates]
-let faceRects = [];     // [{x1, y1, x2, y2} in ASCII grid coordinates]
+let detectedFaces = [];
+let faceRects = [];
 let lastDetectTime = 0;
-const DETECT_INTERVAL = 300; // ms between detection runs
+const DETECT_INTERVAL = 300;
 
-// Try to use the native FaceDetector API (Chrome, Safari)
 async function initFaceDetector() {
   if (typeof FaceDetector !== 'undefined') {
     try {
       faceDetector = new FaceDetector({ fastMode: true, maxDetectedFaces: 10 });
       hasFaceAPI = true;
-      console.log('Using native FaceDetector API');
-    } catch (e) {
-      console.log('FaceDetector API not available, falling back to skin detection');
-    }
+    } catch (e) { /* fallback to skin detection */ }
   }
 }
 initFaceDetector();
 
-// Start
+// ── Recording ───────────────────────────────────────────────────
+let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let canUseMediaRecorder = false;
+
+function checkMediaRecorderSupport() {
+  try {
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = testCanvas.height = 2;
+    const testStream = testCanvas.captureStream(0);
+    const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+    for (const mime of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mime)) {
+        canUseMediaRecorder = true;
+        break;
+      }
+    }
+  } catch (e) {
+    canUseMediaRecorder = false;
+  }
+  btnRecord.style.display = canUseMediaRecorder ? '' : 'none';
+}
+checkMediaRecorderSupport();
+
+function renderToCanvas() {
+  if (!curCells || !curCols || !curRows) return;
+  const w = curCols * curCharW;
+  const h = curRows * curCharH;
+  recordCanvas.width = w;
+  recordCanvas.height = h;
+
+  if (hybridMode) {
+    // Draw video background
+    if (facingMode === 'user') { recordCtx.translate(w, 0); recordCtx.scale(-1, 1); }
+    recordCtx.drawImage(video, 0, 0, w, h);
+    if (facingMode === 'user') recordCtx.setTransform(1, 0, 0, 1, 0, 0);
+  } else {
+    recordCtx.fillStyle = theme.background;
+    recordCtx.fillRect(0, 0, w, h);
+  }
+
+  recordCtx.font = `${curCharH}px 'Courier New', monospace`;
+  recordCtx.textBaseline = 'top';
+
+  for (let y = 0; y < curRows; y++) {
+    for (let x = 0; x < curCols; x++) {
+      const cell = curCells[y * curCols + x];
+      if (cell.ch === ' ' || cell.color === 'transparent') continue;
+      if (hybridMode) {
+        // Dark backing behind ASCII chars for readability
+        recordCtx.fillStyle = 'rgba(0,0,0,0.6)';
+        recordCtx.fillRect(x * curCharW, y * curCharH, curCharW, curCharH);
+      }
+      recordCtx.fillStyle = cell.color;
+      recordCtx.fillText(cell.ch, x * curCharW, y * curCharH);
+    }
+  }
+}
+
+function startRecording() {
+  recordedChunks = [];
+  // Ensure canvas has a valid size before capturing
+  renderToCanvas();
+  const stream = recordCanvas.captureStream(30);
+  const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+  const mimeType = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+  mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: mimeType || 'video/webm' });
+    shareOrDownload(blob, `ascii-cam-${Date.now()}.webm`);
+  };
+  mediaRecorder.start(100);
+  isRecording = true;
+  btnRecord.textContent = 'STOP';
+  btnRecord.classList.add('recording');
+  recIndicator.style.display = 'flex';
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  isRecording = false;
+  btnRecord.textContent = 'REC';
+  btnRecord.classList.remove('recording');
+  recIndicator.style.display = 'none';
+}
+
+function takeScreenshot() {
+  renderToCanvas();
+  recordCanvas.toBlob((blob) => {
+    if (blob) shareOrDownload(blob, `ascii-cam-${Date.now()}.png`);
+  }, 'image/png');
+}
+
+async function shareOrDownload(blob, fileName) {
+  const file = new File([blob], fileName, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'ASCII Matrix Cam' });
+      return;
+    } catch (e) { /* user cancelled or failed, fall through */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Camera ──────────────────────────────────────────────────────
 document.getElementById('start-btn').addEventListener('click', async () => {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('controls').style.display = 'flex';
@@ -242,9 +555,7 @@ document.getElementById('start-btn').addEventListener('click', async () => {
 });
 
 async function startCamera() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-  }
+  if (stream) stream.getTracks().forEach(t => t.stop());
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -259,36 +570,39 @@ async function startCamera() {
   }
 }
 
-// Detect faces using native API
+// ── Face Detection Helpers ──────────────────────────────────────
 async function detectFacesNative() {
   if (!faceDetector || !video.videoWidth) return;
   try {
     const faces = await faceDetector.detect(video);
     detectedFaces = faces.map(f => f.boundingBox);
-  } catch (e) {
-    // Detection can fail intermittently
-  }
+  } catch (e) { /* */ }
 }
 
-// Fallback: detect person-like regions using skin tone + motion
-// Returns a boolean grid (same size as ASCII grid) marking "person" pixels
+function isSkinTone(r, g, b) {
+  if (r > 80 && g > 40 && b > 20 && r > g && r > b && (r - g) > 10 && Math.abs(r - g) < 130 && r - b > 15) return true;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), diff = max - min;
+  if (diff > 0) {
+    let h = 0;
+    if (max === r) h = 60 * ((g - b) / diff);
+    else if (max === g) h = 60 * (2 + (b - r) / diff);
+    else h = 60 * (4 + (r - g) / diff);
+    if (h < 0) h += 360;
+    const s = diff / max, v = max / 255;
+    if (h >= 0 && h <= 50 && s >= 0.1 && s <= 0.7 && v >= 0.2) return true;
+  }
+  return false;
+}
+
 function detectSkinTones(pixels, cols, rows) {
   const mask = new Uint8Array(cols * rows);
-
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const i = (y * cols + x) * 4;
-      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
-
-      // Skin tone detection in RGB space
-      // Covers a wide range of skin tones
-      if (isSkinTone(r, g, b)) {
-        mask[y * cols + x] = 1;
-      }
+      if (isSkinTone(pixels[i], pixels[i + 1], pixels[i + 2])) mask[y * cols + x] = 1;
     }
   }
-
-  // Dilate the mask to create connected person regions
+  // Dilate
   const dilated = new Uint8Array(cols * rows);
   const radius = 3;
   for (let y = 0; y < rows; y++) {
@@ -297,123 +611,57 @@ function detectSkinTones(pixels, cols, rows) {
         for (let dy = -radius; dy <= radius; dy++) {
           for (let dx = -radius; dx <= radius; dx++) {
             const ny = y + dy, nx = x + dx;
-            if (ny >= 0 && ny < rows && nx >= 0 && nx < cols) {
-              dilated[ny * cols + nx] = 1;
-            }
+            if (ny >= 0 && ny < rows && nx >= 0 && nx < cols) dilated[ny * cols + nx] = 1;
           }
         }
       }
     }
   }
-
-  // Find connected components and filter small ones
   return findPersonRegions(dilated, cols, rows);
 }
 
-function isSkinTone(r, g, b) {
-  // Multiple skin detection rules for broad coverage
-  // Rule 1: General RGB range
-  if (r > 80 && g > 40 && b > 20 &&
-      r > g && r > b &&
-      (r - g) > 10 &&
-      Math.abs(r - g) < 130 &&
-      r - b > 15) {
-    return true;
-  }
-
-  // Rule 2: HSV-based (approximate)
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const diff = max - min;
-  if (diff > 0) {
-    let h = 0;
-    if (max === r) h = 60 * ((g - b) / diff);
-    else if (max === g) h = 60 * (2 + (b - r) / diff);
-    else h = 60 * (4 + (r - g) / diff);
-    if (h < 0) h += 360;
-    const s = diff / max;
-    const v = max / 255;
-    // Skin hue range: ~0-50 degrees, moderate saturation
-    if (h >= 0 && h <= 50 && s >= 0.1 && s <= 0.7 && v >= 0.2) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function findPersonRegions(mask, cols, rows) {
-  // Simple flood fill to find connected regions
   const visited = new Uint8Array(cols * rows);
   const result = new Uint8Array(cols * rows);
-  const minRegionSize = Math.floor(cols * rows * 0.005); // at least 0.5% of screen
-
+  const minSize = Math.floor(cols * rows * 0.005);
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const idx = y * cols + x;
       if (mask[idx] && !visited[idx]) {
-        // BFS flood fill
         const region = [];
         const queue = [idx];
         visited[idx] = 1;
-
         while (queue.length > 0) {
           const curr = queue.shift();
           region.push(curr);
-          const cx = curr % cols;
-          const cy = Math.floor(curr / cols);
-
+          const cx = curr % cols, cy = curr / cols | 0;
           for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-            const nx = cx + dx, ny = cy + dy;
-            const ni = ny * cols + nx;
+            const nx = cx + dx, ny = cy + dy, ni = ny * cols + nx;
             if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && mask[ni] && !visited[ni]) {
               visited[ni] = 1;
               queue.push(ni);
             }
           }
         }
-
-        // Only keep regions large enough to be a person
-        if (region.length >= minRegionSize) {
-          for (const idx of region) {
-            result[idx] = 1;
-          }
+        if (region.length >= minSize) {
+          for (const i of region) result[i] = 1;
         }
       }
     }
   }
-
   return result;
 }
 
-// Convert face bounding boxes to ASCII grid coordinates
 function mapFacesToGrid(cols, rows, vw, vh) {
   faceRects = [];
-  const padding = 0.6; // expand box to capture body too
-
   for (const face of detectedFaces) {
-    // Face coords are in video pixel space
-    const fx = face.x / vw;
-    const fy = face.y / vh;
-    const fw = face.width / vw;
-    const fh = face.height / vh;
-
-    // Expand to approximate body region (face + body below)
-    const bodyH = fh * 4; // body is roughly 4x face height
-    const bodyW = fw * 2.5;
-    const cx = fx + fw / 2;
-    const bodyX = cx - bodyW / 2;
-
-    let x1 = Math.floor((bodyX - fw * padding) * cols);
-    let y1 = Math.floor((fy - fh * padding) * rows);
-    let x2 = Math.ceil((bodyX + bodyW + fw * padding) * cols);
-    let y2 = Math.ceil((fy + bodyH + fh * padding) * rows);
-
-    x1 = Math.max(0, x1);
-    y1 = Math.max(0, y1);
-    x2 = Math.min(cols - 1, x2);
-    y2 = Math.min(rows - 1, y2);
-
+    const fx = face.x / vw, fy = face.y / vh, fw = face.width / vw, fh = face.height / vh;
+    const bodyH = fh * 4, bodyW = fw * 2.5, cx = fx + fw / 2, bodyX = cx - bodyW / 2;
+    const pad = fw * 0.6;
+    let x1 = Math.max(0, (bodyX - pad) * cols | 0);
+    let y1 = Math.max(0, (fy - fh * 0.6) * rows | 0);
+    let x2 = Math.min(cols - 1, Math.ceil((bodyX + bodyW + pad) * cols));
+    let y2 = Math.min(rows - 1, Math.ceil((fy + bodyH + fh * 0.6) * rows));
     faceRects.push({ x1, y1, x2, y2 });
   }
 }
@@ -425,169 +673,166 @@ function isInFaceRect(x, y) {
   return false;
 }
 
-// Higher-res canvas for face detection (skin fallback)
+// ── Render Loop ─────────────────────────────────────────────────
 let skinMask = null;
 
 async function render() {
   if (!running) return;
 
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-  if (!vw || !vh) {
-    requestAnimationFrame(render);
-    return;
-  }
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) { requestAnimationFrame(render); return; }
 
-  const screenW = window.innerWidth;
-  const screenH = window.innerHeight;
+  const screenW = window.innerWidth, screenH = window.innerHeight;
   const { charW, charH } = resOptions[resLevel];
-
-  const cols = Math.floor(screenW / charW);
-  const rows = Math.floor(screenH / charH);
+  const cols = screenW / charW | 0;
+  const rows = screenH / charH | 0;
 
   canvas.width = cols;
   canvas.height = rows;
 
-  // Mirror for front camera
-  if (facingMode === 'user') {
-    ctx.translate(cols, 0);
-    ctx.scale(-1, 1);
-  }
-
+  if (facingMode === 'user') { ctx.translate(cols, 0); ctx.scale(-1, 1); }
   ctx.drawImage(video, 0, 0, cols, rows);
+  if (facingMode === 'user') ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  if (facingMode === 'user') {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // Draw background video for hybrid mode
+  if (hybridMode) {
+    bgCanvas.width = screenW;
+    bgCanvas.height = screenH;
+    if (facingMode === 'user') { bgCtx.translate(screenW, 0); bgCtx.scale(-1, 1); }
+    bgCtx.drawImage(video, 0, 0, screenW, screenH);
+    if (facingMode === 'user') bgCtx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   const imageData = ctx.getImageData(0, 0, cols, rows);
   const pixels = imageData.data;
 
-  // Run detection periodically
+  // Detection
   const now = performance.now();
   if (detectPeople && now - lastDetectTime > DETECT_INTERVAL) {
     lastDetectTime = now;
-
     if (hasFaceAPI) {
       await detectFacesNative();
       mapFacesToGrid(cols, rows, vw, vh);
     } else {
-      // Skin tone fallback
       skinMask = detectSkinTones(pixels, cols, rows);
     }
   }
 
-  // Determine highlight for each pixel
+  // Build highlight map
   const isHighlighted = new Uint8Array(cols * rows);
   if (detectPeople) {
     if (hasFaceAPI && faceRects.length > 0) {
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          if (isInFaceRect(x, y)) {
-            isHighlighted[y * cols + x] = 1;
-          }
-        }
-      }
+      for (let y = 0; y < rows; y++)
+        for (let x = 0; x < cols; x++)
+          if (isInFaceRect(x, y)) isHighlighted[y * cols + x] = 1;
     } else if (!hasFaceAPI && skinMask) {
-      for (let i = 0; i < cols * rows; i++) {
-        isHighlighted[i] = skinMask[i];
-      }
+      for (let i = 0; i < cols * rows; i++) isHighlighted[i] = skinMask[i];
     }
   }
 
-  // Count detected people
-  let personCount = 0;
-  if (detectPeople) {
-    if (hasFaceAPI) {
-      personCount = detectedFaces.length;
-    } else if (skinMask) {
-      // Count connected regions as approximate person count
-      let hasHighlight = false;
-      for (let i = 0; i < isHighlighted.length; i++) {
-        if (isHighlighted[i]) { hasHighlight = true; break; }
-      }
-      personCount = hasHighlight ? '?' : 0;
-    }
-  }
-
-  // Update status bar
+  // Status
   if (detectPeople) {
     const method = hasFaceAPI ? 'FACE_API' : 'SKIN_DETECT';
-    statusBar.innerHTML = `[${method}] <span class="person-count">TARGETS: ${personCount}</span>`;
+    let count = hasFaceAPI ? detectedFaces.length : 0;
+    if (!hasFaceAPI && skinMask) {
+      for (let i = 0; i < isHighlighted.length; i++) { if (isHighlighted[i]) { count = '?'; break; } }
+    }
+    statusBar.innerHTML = `[${method}] <span class="person-count">TARGETS: ${count}</span>`;
   } else {
     statusBar.innerHTML = '';
   }
 
-  // Build ASCII output
+  // Build cells array + HTML
   const charLen = ASCII_CHARS.length;
+  const cells = new Array(rows * cols);
   let html = '';
 
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const i = (y * cols + x) * 4;
-      const r = pixels[i];
-      const g = pixels[i + 1];
-      const b = pixels[i + 2];
+      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
 
       let brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       if (invert) brightness = 1 - brightness;
 
-      const charIndex = Math.floor(brightness * (charLen - 1));
+      const charIndex = brightness * (charLen - 1) | 0;
       const ch = ASCII_CHARS[charIndex];
-      const highlighted = isHighlighted[y * cols + x];
+      const t = charIndex / (charLen - 1);
+      const hl = isHighlighted[y * cols + x];
 
-      if (ch === ' ') {
-        if (highlighted) {
-          html += '<span style="color:#001a1a;text-shadow:none">.</span>';
+      // Hybrid mode: only render ASCII for detected subjects, background is transparent
+      if (hybridMode) {
+        if (hl) {
+          const color = ch === ' ' ? theme.highlightDimColor : theme.highlightColor(t);
+          const displayCh = ch === ' ' ? '.' : ch;
+          cells[y * cols + x] = { ch: displayCh, color };
+          html += `<span style="color:${color};text-shadow:${theme.highlightGlow};background:rgba(0,0,0,0.6)">${displayCh}</span>`;
         } else {
+          cells[y * cols + x] = { ch: ' ', color: 'transparent' };
           html += ' ';
         }
-      } else if (useColor) {
-        const idx = charIndex;
-        const t = idx / (charLen - 1);
-
-        if (highlighted) {
-          // Cyan/white highlight for detected people
-          const rr = Math.floor(30 + t * 200);
-          const gg = Math.floor(200 + t * 55);
-          const bb = Math.floor(200 + t * 55);
-          html += `<span style="color:rgb(${rr},${gg},${bb});text-shadow:0 0 6px #00ffff,0 0 12px #005577">${ch}</span>`;
-        } else {
-          // Normal green matrix
-          const gBase = Math.floor(80 + t * 175);
-          const rAdd = Math.floor(t * t * 80);
-          const bAdd = Math.floor(t * t * 40);
-          html += `<span style="color:rgb(${rAdd},${gBase},${bAdd})">${ch}</span>`;
-        }
       } else {
-        if (highlighted) {
-          html += `<span style="color:#00ffff;text-shadow:0 0 6px #00ffff">${ch}</span>`;
+        // Normal full-ASCII mode
+        let color;
+        if (ch === ' ') {
+          color = hl ? theme.highlightDimColor : theme.background;
+        } else if (hl) {
+          color = theme.highlightColor(t);
         } else {
+          color = theme.charColor(t);
+        }
+
+        cells[y * cols + x] = { ch: ch === ' ' && hl ? '.' : ch, color };
+
+        if (ch === ' ' && !hl) {
+          html += ' ';
+        } else if (!useColor && !hl) {
           html += ch;
+        } else {
+          const glow = hl ? `;text-shadow:${theme.highlightGlow}` : '';
+          html += `<span style="color:${color}${glow}">${ch === ' ' && hl ? '.' : ch}</span>`;
         }
       }
     }
     if (y < rows - 1) html += '\n';
   }
 
-  output.innerHTML = html;
+  // Store for recording/screenshot
+  curCols = cols; curRows = rows; curCharW = charW; curCharH = charH; curCells = cells;
+
+  if (useColor || detectPeople || hybridMode) {
+    output.innerHTML = html;
+  } else {
+    let text = '';
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        text += cells[y * cols + x].ch;
+      }
+      if (y < rows - 1) text += '\n';
+    }
+    output.textContent = text;
+  }
+
+  // Draw to record canvas if recording
+  if (isRecording) renderToCanvas();
+
   requestAnimationFrame(render);
 }
 
-// Matrix glitch effect
+// ── Glitch Effect ───────────────────────────────────────────────
 setInterval(() => {
   if (Math.random() < 0.3) {
     const spans = output.querySelectorAll('span');
     if (spans.length > 0) {
-      const count = Math.floor(Math.random() * 8) + 1;
+      const count = (Math.random() * 8 | 0) + 1;
       for (let i = 0; i < count; i++) {
-        const idx = Math.floor(Math.random() * spans.length);
-        const mc = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+        const idx = Math.random() * spans.length | 0;
+        const mc = MATRIX_CHARS[Math.random() * MATRIX_CHARS.length | 0];
         const origText = spans[idx].textContent;
         const origColor = spans[idx].style.color;
         spans[idx].textContent = mc;
-        spans[idx].style.color = '#ffffff';
-        spans[idx].style.textShadow = '0 0 10px #00ff41, 0 0 20px #00ffff';
+        spans[idx].style.color = theme.glitchColor;
+        spans[idx].style.textShadow = theme.glitchGlow;
         setTimeout(() => {
           if (spans[idx]) {
             spans[idx].textContent = origText;
@@ -600,7 +845,13 @@ setInterval(() => {
   }
 }, 80);
 
-// Controls
+// ── Controls ────────────────────────────────────────────────────
+document.getElementById('btn-theme').addEventListener('click', () => {
+  currentThemeIndex = (currentThemeIndex + 1) % themeKeys.length;
+  applyTheme(themeKeys[currentThemeIndex]);
+  document.getElementById('btn-theme').textContent = theme.name;
+});
+
 document.getElementById('btn-flip').addEventListener('click', () => {
   facingMode = facingMode === 'environment' ? 'user' : 'environment';
   startCamera();
@@ -624,13 +875,26 @@ document.getElementById('btn-invert').addEventListener('click', (e) => {
 document.getElementById('btn-detect').addEventListener('click', (e) => {
   detectPeople = !detectPeople;
   e.target.classList.toggle('active', detectPeople);
-  if (!detectPeople) {
-    detectedFaces = [];
-    faceRects = [];
-    skinMask = null;
-    statusBar.innerHTML = '';
+  if (!detectPeople) { detectedFaces = []; faceRects = []; skinMask = null; statusBar.innerHTML = ''; }
+});
+
+document.getElementById('btn-hybrid').addEventListener('click', (e) => {
+  hybridMode = !hybridMode;
+  e.target.classList.toggle('active', hybridMode);
+  document.body.classList.toggle('hybrid-mode', hybridMode);
+  // Auto-enable detection when entering hybrid mode
+  if (hybridMode && !detectPeople) {
+    detectPeople = true;
+    document.getElementById('btn-detect').classList.add('active');
   }
 });
+
+btnRecord.addEventListener('click', () => {
+  if (!isRecording) startRecording();
+  else stopRecording();
+});
+
+btnSnap.addEventListener('click', takeScreenshot);
 </script>
 </body>
 </html>
